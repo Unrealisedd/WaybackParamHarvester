@@ -1,6 +1,7 @@
 import subprocess
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlunparse
 import os
+from collections import defaultdict
 
 def get_wayback_urls(subdomain):
     try:
@@ -9,6 +10,11 @@ def get_wayback_urls(subdomain):
     except subprocess.CalledProcessError:
         print(f"Error running waybackurls for {subdomain}")
         return []
+
+def get_url_signature(url):
+    parsed = urlparse(url)
+    params = frozenset(parse_qs(parsed.query).keys())
+    return (parsed.scheme, parsed.netloc, parsed.path, params)
 
 def has_parameters(url):
     parsed = urlparse(url)
@@ -22,27 +28,23 @@ def process_subdomains(subdomain_file):
     with open(subdomain_file, 'r') as f:
         subdomains = [line.strip() for line in f]
 
-    unique_urls = {}
-    multi_param_urls = set()
+    url_groups = defaultdict(list)
 
     for subdomain in subdomains:
         print(f"Processing {subdomain}...")
         urls = get_wayback_urls(subdomain)
         for url in urls:
             if has_parameters(url):
-                signature = get_parameter_signature(url)
-                
-                # Always include URLs with multiple parameters
-                if len(signature) > 1:
-                    multi_param_urls.add(url)
-                
-                # For single parameter URLs, keep the shortest one
-                elif signature not in unique_urls or len(url) < len(unique_urls[signature]):
-                    unique_urls[signature] = url
+                signature = get_url_signature(url)
+                url_groups[signature].append(url)
 
-    # Combine single parameter URLs and multi-parameter URLs
-    result_urls = set(unique_urls.values()) | multi_param_urls
-    return sorted(result_urls)
+    unique_urls = []
+    for signature, urls in url_groups.items():
+        # Sort URLs by length and choose the shortest one
+        shortest_url = min(urls, key=len)
+        unique_urls.append(shortest_url)
+
+    return sorted(unique_urls)
 
 def main():
     subdomain_file = input("Enter the path to the subdomain list file: ").strip()
