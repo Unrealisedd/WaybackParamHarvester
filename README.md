@@ -42,6 +42,10 @@ sub2.example.com
 
 The script will display the processed URLs on the screen and save them to the specified output file. Each URL will be on a separate line.
 
+### reflector
+
+Run reflector.py if you want to test the outputted parameters for values being reflected.
+
 ### Notes
 
 - The script may take some time to run, depending on the number of subdomains and the response time of the waybackurls tool.
